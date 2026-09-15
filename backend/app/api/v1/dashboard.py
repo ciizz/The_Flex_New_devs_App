@@ -13,7 +13,11 @@ async def get_dashboard_summary(
     current_user: dict = Depends(get_current_user)
 ) -> Dict[str, Any]:
     
-    tenant_id = getattr(current_user, "tenant_id", "default_tenant") or "default_tenant"
+    # Tenant comes from the JWT app_metadata. Never fall back to a made-up tenant: a request
+    # without one must not query (or cache) anything.
+    tenant_id = getattr(current_user, "tenant_id", None)
+    if not tenant_id:
+        raise HTTPException(status_code=401, detail="No tenant associated with this user")
     
     # month/year are optional; omitted = all-time (what the dashboard shows today).
     # A month is defined in the property's own timezone (see reservations.py).
